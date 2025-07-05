@@ -210,6 +210,8 @@ class Game {
         this.touchStartX = 0;
         this.touchStartY = 0;
         this.touchStartTime = 0;
+        this.disappearingPuyos = []; // 消えるアニメーション中のぷよ
+        this.particles = []; // パーティクルエフェクト
     }
 
     async init() {
@@ -438,13 +440,18 @@ class Game {
         // スペースキーの処理
         if (e.key === ' ') {
             e.preventDefault();
+            // ゲームオーバー時はリロード
+            if (this.gameOver) {
+                location.reload();
+                return;
+            }
             // ゲーム開始前ならスタート
-            if (this.isPaused && !this.gameOver) {
+            if (this.isPaused) {
                 this.togglePause();
                 return;
             }
             // ゲーム中なら右回転
-            if (!this.gameOver && !this.isPaused && !this.isProcessingChain) {
+            if (!this.isPaused && !this.isProcessingChain) {
                 this.currentPair.rotate(1, this.field);
                 this.draw();
             }
@@ -556,8 +563,24 @@ class Game {
 
         if (toRemove.length > 0) {
             this.chainCount++;
-            for (const puyo of toRemove) {
-                this.field[puyo.y][puyo.x] = null;
+            
+            // 消えるぷよのアニメーション情報を作成
+            for (const pos of toRemove) {
+                const puyo = this.field[pos.y][pos.x];
+                if (puyo) {
+                    this.disappearingPuyos.push({
+                        x: puyo.x,
+                        y: puyo.y,
+                        color: puyo.color,
+                        progress: 0,
+                        scale: 1,
+                        opacity: 1
+                    });
+                    
+                    // パーティクルエフェクトを生成
+                    this.createParticles(puyo.x, puyo.y, puyo.color);
+                }
+                this.field[pos.y][pos.x] = null;
             }
             
             const chainBonus = Math.pow(2, this.chainCount - 1);
@@ -617,11 +640,70 @@ class Game {
                 break;
             }
             
-            await this.animateFrame(300);
+            // 消去アニメーションを再生
+            await this.animateDisappear(400);
         }
         
         this.isProcessingChain = false;
         this.spawnNewPair();
+    }
+    
+    createParticles(x, y, color) {
+        const particleCount = 8;
+        const centerX = (x + 0.5) * CELL_SIZE;
+        const centerY = (y + 0.5) * CELL_SIZE;
+        
+        for (let i = 0; i < particleCount; i++) {
+            const angle = (Math.PI * 2 * i) / particleCount;
+            const speed = 2 + Math.random() * 3;
+            this.particles.push({
+                x: centerX,
+                y: centerY,
+                vx: Math.cos(angle) * speed,
+                vy: Math.sin(angle) * speed - 2,
+                color: color,
+                size: 5 + Math.random() * 5,
+                life: 1.0,
+                decay: 0.02 + Math.random() * 0.03
+            });
+        }
+    }
+    
+    async animateDisappear(duration) {
+        const startTime = performance.now();
+        
+        return new Promise(resolve => {
+            const animate = () => {
+                const elapsed = performance.now() - startTime;
+                const progress = Math.min(elapsed / duration, 1);
+                
+                // 消えるぷよのアニメーション更新
+                this.disappearingPuyos = this.disappearingPuyos.filter(puyo => {
+                    puyo.progress = progress;
+                    puyo.scale = 1 + progress * 0.5;
+                    puyo.opacity = 1 - progress;
+                    return progress < 1;
+                });
+                
+                // パーティクルの更新
+                this.particles = this.particles.filter(particle => {
+                    particle.x += particle.vx;
+                    particle.y += particle.vy;
+                    particle.vy += 0.3; // 重力
+                    particle.life -= particle.decay;
+                    return particle.life > 0;
+                });
+                
+                this.draw();
+                
+                if (elapsed < duration || this.disappearingPuyos.length > 0 || this.particles.length > 0) {
+                    requestAnimationFrame(animate);
+                } else {
+                    resolve();
+                }
+            };
+            requestAnimationFrame(animate);
+        });
     }
 
     animateFrame(duration) {
@@ -681,6 +763,38 @@ class Game {
             }
         }
 
+        // 消えるアニメーション中のぷよを描画
+        for (const puyo of this.disappearingPuyos) {
+            this.ctx.save();
+            const centerX = (puyo.x + 0.5) * CELL_SIZE;
+            const centerY = (puyo.y + 0.5) * CELL_SIZE;
+            
+            this.ctx.translate(centerX, centerY);
+            this.ctx.scale(puyo.scale, puyo.scale);
+            this.ctx.globalAlpha = puyo.opacity;
+            
+            // ぷよを描画
+            const tempPuyo = new Puyo(0, 0, puyo.color);
+            tempPuyo.draw(this.ctx, -centerX, -centerY, this.imageManager, this.useCustomImages);
+            
+            this.ctx.restore();
+        }
+        
+        // パーティクルを描画
+        for (const particle of this.particles) {
+            this.ctx.save();
+            this.ctx.globalAlpha = particle.life;
+            this.ctx.fillStyle = particle.color;
+            this.ctx.shadowBlur = 10;
+            this.ctx.shadowColor = particle.color;
+            
+            this.ctx.beginPath();
+            this.ctx.arc(particle.x, particle.y, particle.size * particle.life, 0, Math.PI * 2);
+            this.ctx.fill();
+            
+            this.ctx.restore();
+        }
+        
         if (this.currentPair && !this.isProcessingChain) {
             this.currentPair.draw(this.ctx, this.imageManager, this.useCustomImages);
         }
