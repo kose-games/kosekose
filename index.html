@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>kosekose</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="game-container">
+        <div class="game-panel game-panel-left">
+            <div class="score-panel">
+                <h3>スコア</h3>
+                <div id="score">0</div>
+            </div>
+            <div class="next-panel">
+                <h3>ネクスト</h3>
+                <canvas id="nextCanvas" width="80" height="80"></canvas>
+            </div>
+            <div class="controls">
+                <h3>操作方法</h3>
+                <ul>
+                    <li>← → : 移動</li>
+                    <li>↓ : 高速落下</li>
+                    <li>↑ : 一気に落下</li>
+                    <li>Z : 左回転</li>
+                    <li>Space : 開始/右回転</li>
+                    <li>X : 一時停止</li>
+                </ul>
+            </div>
+        </div>
+        <div class="game-area">
+            <canvas id="gameCanvas" width="300" height="600"></canvas>
+            <div id="chainDisplay" class="chain-display hidden">
+                <span class="chain-number">0</span>
+                <span class="chain-text">連鎖！</span>
+            </div>
+            <div id="gameOver" class="game-over hidden">
+                <h2>ゲームオーバー</h2>
+                <p>最終スコア: <span id="finalScore">0</span></p>
+                <button onclick="location.reload()">もう一度プレイ</button>
+            </div>
+        </div>
+        <div class="game-panel game-panel-right">
+            <div class="theme-panel">
+                <h3>テーマ設定</h3>
+                <button id="themeToggle" class="theme-toggle-btn">
+                    <span class="theme-icon">🌙</span>
+                    <span class="theme-text">ダークモード</span>
+                </button>
+            </div>
+            <div class="bgm-panel">
+                <h3>BGM設定</h3>
+                <button id="bgmToggle" class="bgm-toggle-btn">
+                    <span class="bgm-icon">🔇</span>
+                    <span class="bgm-text">BGM OFF</span>
+                </button>
+                <div class="volume-control">
+                    <label for="volumeSlider">音量:</label>
+                    <input type="range" id="volumeSlider" min="0" max="100" value="50">
+                    <span id="volumeValue">50%</span>
+                </div>
+            </div>
+            <div class="color-settings-panel">
+                <h3>色数設定</h3>
+                <div class="color-count-options">
+                    <label>
+                        <input type="radio" name="colorCount" value="3" id="colors3">
+                        <span>3色</span>
+                    </label>
+                    <label>
+                        <input type="radio" name="colorCount" value="4" id="colors4" checked>
+                        <span>4色</span>
+                    </label>
+                </div>
+                <p class="color-info">※色数を変更するとゲームがリセットされます</p>
+            </div>
+            <div class="image-settings-panel">
+                <h3>画像設定</h3>
+                <label class="checkbox-label">
+                    <input type="checkbox" id="useCustomImages">
+                    <span>オリジナル画像を使用</span>
+                </label>
+                <p class="image-info">※チェックを入れるとimg/001.png〜004.pngを使用します</p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- BGM初回確認ダイアログ -->
+    <div id="bgmConfirmDialog" class="bgm-confirm-dialog hidden">
+        <div class="dialog-content">
+            <h3>BGMを有効にしますか？</h3>
+            <p>このゲームはBGMを再生できます。<br>BGMを有効にしますか？</p>
+            <div class="dialog-buttons">
+                <button id="bgmConfirmYes" class="dialog-btn dialog-btn-primary">はい</button>
+                <button id="bgmConfirmNo" class="dialog-btn">いいえ</button>
+            </div>
+        </div>
+    </div>
+    
+    <script src="game.js"></script>
+</body>
+</html>
