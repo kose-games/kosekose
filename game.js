@@ -206,13 +206,23 @@ class Game {
         this.soundEffects = null; // 後で初期化
         this.colorCount = 4; // デフォルトは4色
         this.useCustomImages = false; // デフォルトは画像を使用しない
+        this.isMobile = this.checkIfMobile();
+        this.touchStartX = 0;
+        this.touchStartY = 0;
+        this.touchStartTime = 0;
     }
 
     async init() {
+        this.setupCanvas();
         this.setupEventListeners();
         this.createNextPair();
         this.spawnNewPair();
         this.draw();
+        
+        // モバイルの場合はコントローラーを表示
+        if (this.isMobile) {
+            document.getElementById('mobileControls').classList.remove('hidden');
+        }
         
         // 画像を非同期で読み込み、完了後に再描画
         this.imageManager.loadAllImages().then(() => {
@@ -224,9 +234,195 @@ class Game {
             }
         });
     }
+    
+    checkIfMobile() {
+        return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) 
+            || window.innerWidth <= 768;
+    }
+    
+    setupCanvas() {
+        // モバイルでのキャンバスサイズ調整
+        if (this.isMobile) {
+            const resizeCanvas = () => {
+                const maxWidth = Math.min(window.innerWidth * 0.9, 300);
+                const scale = maxWidth / 300;
+                this.canvas.style.width = maxWidth + 'px';
+                this.canvas.style.height = (600 * scale) + 'px';
+            };
+            
+            resizeCanvas();
+            window.addEventListener('resize', resizeCanvas);
+            window.addEventListener('orientationchange', resizeCanvas);
+        }
+    }
 
     setupEventListeners() {
         document.addEventListener('keydown', (e) => this.handleKeyPress(e));
+        
+        // タッチイベントの設定
+        if (this.isMobile) {
+            this.setupTouchEvents();
+            this.setupMobileButtons();
+        }
+    }
+    
+    setupTouchEvents() {
+        const canvas = this.canvas;
+        
+        canvas.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            const touch = e.touches[0];
+            this.touchStartX = touch.clientX;
+            this.touchStartY = touch.clientY;
+            this.touchStartTime = Date.now();
+        }, { passive: false });
+        
+        canvas.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            if (this.gameOver || this.isProcessingChain) return;
+            
+            const touch = e.changedTouches[0];
+            const deltaX = touch.clientX - this.touchStartX;
+            const deltaY = touch.clientY - this.touchStartY;
+            const deltaTime = Date.now() - this.touchStartTime;
+            
+            // タップ判定（移動量が小さく、時間が短い）
+            if (Math.abs(deltaX) < 30 && Math.abs(deltaY) < 30 && deltaTime < 300) {
+                // キャンバスの中心より左側をタップしたら左回転、右側なら右回転
+                const rect = canvas.getBoundingClientRect();
+                const centerX = rect.left + rect.width / 2;
+                if (touch.clientX < centerX) {
+                    this.currentPair.rotate(-1, this.field);
+                } else {
+                    this.currentPair.rotate(1, this.field);
+                }
+            }
+            // スワイプ判定
+            else if (Math.abs(deltaX) > Math.abs(deltaY)) {
+                // 横スワイプ
+                if (deltaX > 50) {
+                    this.currentPair.move(1, 0, this.field);
+                } else if (deltaX < -50) {
+                    this.currentPair.move(-1, 0, this.field);
+                }
+            } else {
+                // 縦スワイプ
+                if (deltaY > 50) {
+                    this.fallSpeed = FAST_FALL_SPEED;
+                } else if (deltaY < -50) {
+                    this.hardDrop();
+                }
+            }
+            
+            this.draw();
+        }, { passive: false });
+        
+        // ダブルタップで一時停止
+        let lastTap = 0;
+        canvas.addEventListener('touchstart', (e) => {
+            const currentTime = Date.now();
+            const tapLength = currentTime - lastTap;
+            if (tapLength < 500 && tapLength > 0) {
+                e.preventDefault();
+                this.togglePause();
+            }
+            lastTap = currentTime;
+        });
+    }
+    
+    setupMobileButtons() {
+        // 仮想ボタンのイベント設定
+        const btnLeft = document.getElementById('btnLeft');
+        const btnRight = document.getElementById('btnRight');
+        const btnDown = document.getElementById('btnDown');
+        const btnRotateLeft = document.getElementById('btnRotateLeft');
+        const btnRotateRight = document.getElementById('btnRotateRight');
+        const btnHardDrop = document.getElementById('btnHardDrop');
+        const btnPause = document.getElementById('btnPause');
+        
+        // 移動ボタン
+        btnLeft.addEventListener('click', () => {
+            if (!this.gameOver && !this.isPaused && !this.isProcessingChain) {
+                this.currentPair.move(-1, 0, this.field);
+                this.draw();
+            }
+        });
+        
+        btnRight.addEventListener('click', () => {
+            if (!this.gameOver && !this.isPaused && !this.isProcessingChain) {
+                this.currentPair.move(1, 0, this.field);
+                this.draw();
+            }
+        });
+        
+        // 落下ボタン
+        let downInterval;
+        btnDown.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            if (!this.gameOver && !this.isPaused && !this.isProcessingChain) {
+                this.fallSpeed = FAST_FALL_SPEED;
+                // 押し続けている間は高速落下を維持
+                downInterval = setInterval(() => {
+                    this.fallSpeed = FAST_FALL_SPEED;
+                }, 50);
+            }
+        });
+        
+        btnDown.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            clearInterval(downInterval);
+            this.fallSpeed = FALL_SPEED;
+        });
+        
+        btnDown.addEventListener('touchcancel', (e) => {
+            e.preventDefault();
+            clearInterval(downInterval);
+            this.fallSpeed = FALL_SPEED;
+        });
+        
+        // 回転ボタン
+        btnRotateLeft.addEventListener('click', () => {
+            if (!this.gameOver && !this.isPaused && !this.isProcessingChain) {
+                this.currentPair.rotate(-1, this.field);
+                this.draw();
+            }
+        });
+        
+        btnRotateRight.addEventListener('click', () => {
+            if (!this.gameOver && !this.isPaused && !this.isProcessingChain) {
+                this.currentPair.rotate(1, this.field);
+                this.draw();
+            }
+        });
+        
+        // ハードドロップボタン
+        btnHardDrop.addEventListener('click', () => {
+            if (!this.gameOver && !this.isPaused && !this.isProcessingChain) {
+                this.hardDrop();
+            }
+        });
+        
+        // 一時停止ボタン
+        btnPause.addEventListener('click', () => {
+            if (!this.gameOver) {
+                this.togglePause();
+                const pauseIcon = btnPause.querySelector('.pause-icon');
+                const playIcon = btnPause.querySelector('.play-icon');
+                if (this.isPaused) {
+                    pauseIcon.classList.add('hidden');
+                    playIcon.classList.remove('hidden');
+                } else {
+                    pauseIcon.classList.remove('hidden');
+                    playIcon.classList.add('hidden');
+                }
+            }
+        });
+        
+        // 初期状態でプレイボタンを表示
+        const pauseIcon = btnPause.querySelector('.pause-icon');
+        const playIcon = btnPause.querySelector('.play-icon');
+        pauseIcon.classList.add('hidden');
+        playIcon.classList.remove('hidden');
     }
 
     handleKeyPress(e) {

@@ -98,6 +98,58 @@
         </div>
     </div>
     
+    <!-- モバイル用仮想コントローラー -->
+    <div id="mobileControls" class="mobile-controls hidden">
+        <div class="control-row">
+            <button class="control-btn" id="btnRotateLeft">
+                <svg width="30" height="30" viewBox="0 0 30 30">
+                    <path d="M15 5 C8 5 3 10 3 17 L8 17 L3 22 L-2 17 L3 17" 
+                          stroke="currentColor" stroke-width="2" fill="none"/>
+                    <circle cx="15" cy="17" r="8" stroke="currentColor" 
+                            stroke-width="2" fill="none" stroke-dasharray="3,1"/>
+                </svg>
+            </button>
+            <button class="control-btn" id="btnHardDrop">
+                <svg width="30" height="30" viewBox="0 0 30 30">
+                    <path d="M15 5 L15 20 M10 15 L15 20 L20 15" 
+                          stroke="currentColor" stroke-width="3" fill="none"/>
+                    <rect x="10" y="22" width="10" height="3" fill="currentColor"/>
+                </svg>
+            </button>
+            <button class="control-btn" id="btnRotateRight">
+                <svg width="30" height="30" viewBox="0 0 30 30">
+                    <path d="M15 5 C22 5 27 10 27 17 L22 17 L27 22 L32 17 L27 17" 
+                          stroke="currentColor" stroke-width="2" fill="none"/>
+                    <circle cx="15" cy="17" r="8" stroke="currentColor" 
+                            stroke-width="2" fill="none" stroke-dasharray="3,1"/>
+                </svg>
+            </button>
+        </div>
+        <div class="control-row">
+            <button class="control-btn" id="btnLeft">
+                <svg width="30" height="30" viewBox="0 0 30 30">
+                    <path d="M20 10 L10 15 L20 20 Z" fill="currentColor"/>
+                </svg>
+            </button>
+            <button class="control-btn" id="btnDown">
+                <svg width="30" height="30" viewBox="0 0 30 30">
+                    <path d="M10 10 L15 20 L20 10 Z" fill="currentColor"/>
+                </svg>
+            </button>
+            <button class="control-btn" id="btnRight">
+                <svg width="30" height="30" viewBox="0 0 30 30">
+                    <path d="M10 10 L20 15 L10 20 Z" fill="currentColor"/>
+                </svg>
+            </button>
+        </div>
+        <div class="control-row">
+            <button class="control-btn control-btn-wide" id="btnPause">
+                <span class="pause-icon">⏸</span>
+                <span class="play-icon hidden">▶</span>
+            </button>
+        </div>
+    </div>
+    
     <script src="game.js"></script>
 </body>
 </html>
