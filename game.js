@@ -632,16 +632,24 @@ class Game {
     async processChains() {
         this.isProcessingChain = true;
         
+        let firstLoop = true;
         while (true) {
-            this.dropFloatingPuyos();
-            await this.animateFrame(100);
+            // 初回以外は落下アニメーションを実行
+            if (!firstLoop) {
+                this.dropFloatingPuyos();
+                await this.animateFrame(50); // 落下アニメーションも短縮
+            } else {
+                firstLoop = false;
+                this.dropFloatingPuyos();
+                await this.animateFrame(100);
+            }
             
             if (!this.checkChains()) {
                 break;
             }
             
             // 消去アニメーションを再生
-            await this.animateDisappear(400);
+            await this.animateDisappear(200);
         }
         
         this.isProcessingChain = false;
